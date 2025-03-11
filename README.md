@@ -55,4 +55,29 @@ after deployment, for the deployed contract address check `/scripts/build/contra
   "chainId": 11155111
 }
 ```
-
+## project Structure
+```bash
+baterx sol/
+├─ contracts/
+│  ├─ AddressTransfer.sol
+│  ├─ Erc20.sol
+│  └─ MarketPlace.sol
+├─ scripts/
+│  ├─ build/
+│  │  ├─ contract1/
+│  │  │  └─ deployment.json
+│  │  ├─ contract2/
+│  │  │  └─ deployment.json
+│  │  └─ contract3/
+│  │     └─ deployment.json
+│  └─ index.js
+├─ test/
+│  └─ marketplaceTest.js
+├─ .env
+├─ .env.example
+├─ .gitignore
+├─ hardhat.config.js
+├─ package-lock.json
+├─ package.json
+└─ README.md
+```
