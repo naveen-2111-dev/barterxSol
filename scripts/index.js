@@ -64,14 +64,14 @@ async function Main() {
     console.log(`${folderName} deployed at: ${addressOfContract}`);
   }
 
-  await deployContract(
-    path.join(ContractPath, contractFiles.contract1),
-    "contract1"
-  );
-  await deployContract(
-    path.join(ContractPath, contractFiles.contract2),
-    "contract2"
-  );
+  // await deployContract(
+  //   path.join(ContractPath, contractFiles.contract1),
+  //   "contract1"
+  // );
+  // await deployContract(
+  //   path.join(ContractPath, contractFiles.contract2),
+  //   "contract2"
+  // );
   await deployContract(
     path.join(ContractPath, contractFiles.contract3),
     "contract3"

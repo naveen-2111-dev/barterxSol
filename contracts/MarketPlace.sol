@@ -47,12 +47,12 @@ contract BarterXmarketPlace {
      */
     function addProduct(
         uint256 price,
-        uint256 stock
+        uint256 stock,
         bytes32 name,
         bytes memory image,
         bytes memory description,
         bytes32 productType,
-        bytes32 condition,
+        bytes32 condition
     ) external returns (uint256) {
         store[ProductCount] = Store({
             name: name,
@@ -66,7 +66,7 @@ contract BarterXmarketPlace {
         });
 
         unchecked {
-            return ProductCount++;
+            return ++ProductCount;
         }
     }
 
