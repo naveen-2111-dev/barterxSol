@@ -41,7 +41,7 @@ async function Main() {
     );
 
     console.log(`Deploying ${folderName}...`);
-    const gasLimit = 1384486;
+    const gasLimit = 5000000;
     const contractAddress = "0xcAB8eE241Cd769eED53079b059603B6f7aB6641f";
     const tx = await deploy.deploy(contractAddress, { gasLimit });
 

@@ -5,12 +5,9 @@ import "./Erc20.sol";
 
 /**
  * @title BarterXmarketPlace
- * @dev A decentralized marketplace where users can add and buy products using BRTX tokens.
+ * @dev A decentralized marketplace where users can buy products using BRTX tokens.
  */
 contract BarterXmarketPlace {
-    /**
-     * @dev Structure representing a product in the marketplace.
-     */
     struct Store {
         uint256 price;
         uint256 stock;
@@ -22,29 +19,35 @@ contract BarterXmarketPlace {
         address seller;
     }
 
+    struct Order {
+        uint256 productId;
+        uint256 amountPaid;
+        address buyer;
+        address seller;
+        bool isPaid;
+        bool isDelivered;
+    }
+
     BRTX public immutable brtx;
     mapping(uint256 => Store) public store;
+    mapping(uint256 => Order) public orders;
     uint256 public ProductCount = 1;
+    uint256 public OrderCount = 1;
 
-    /**
-     * @dev Constructor to initialize the marketplace with the BRTX token address.
-     * @param _brtxToken Address of the deployed BRTX token contract.
-     */
+    event OrderPlaced(
+        uint256 orderId,
+        uint256 productId,
+        address buyer,
+        address seller,
+        bool isPaid
+    );
+    event OrderPaid(uint256 orderId, uint256 amountPaid);
+    event OrderDelivered(uint256 orderId);
+
     constructor(address _brtxToken) {
         brtx = BRTX(_brtxToken);
     }
 
-    /**
-     * @dev Adds a new product to the marketplace.
-     * @param name Name of the product (bytes32 format).
-     * @param image Image URL of the product (stored as bytes).
-     * @param price Price of the product in BRTX tokens.
-     * @param description Description of the product (stored as bytes).
-     * @param productType Type/category of the product (bytes32 format).
-     * @param condition Condition of the product (bytes32 format, e.g., New, Used).
-     * @param stock Available stock of the product.
-     * @return The newly assigned product ID.
-     */
     function addProduct(
         uint256 price,
         uint256 stock,
@@ -70,75 +73,70 @@ contract BarterXmarketPlace {
         }
     }
 
-    /**
-     * @dev Allows users to purchase a product using BRTX tokens.
-     * @param _id The product ID to purchase.
-     *
-     * Requirements:
-     * - Product must exist.
-     * - Product must be in stock.
-     * - Buyer must approve the contract to spend BRTX tokens.
-     */
-    function buyProduct(uint256 _id) external {
+    function buyProduct(uint256 _id, bool _isPrepaid) external {
         Store storage stored = store[_id];
-
         require(stored.stock > 0, "Out of stock");
-        require(
-            brtx.allowance(msg.sender, address(this)) >= stored.price,
-            "Allowance too low"
-        );
 
-        bool success = brtx.transferFrom(
-            msg.sender,
-            stored.seller,
-            stored.price
-        );
-        require(success, "Transfer failed");
+        uint256 orderId = OrderCount++;
+
+        if (_isPrepaid) {
+            require(
+                brtx.allowance(msg.sender, address(this)) >= stored.price,
+                "Allowance too low"
+            );
+
+            bool success = brtx.transferFrom(
+                msg.sender,
+                stored.seller,
+                stored.price
+            );
+            require(success, "Transfer failed");
+
+            orders[orderId] = Order({
+                productId: _id,
+                amountPaid: stored.price,
+                buyer: msg.sender,
+                seller: stored.seller,
+                isPaid: true,
+                isDelivered: false
+            });
+
+            emit OrderPaid(orderId, stored.price);
+        } else {
+            orders[orderId] = Order({
+                productId: _id,
+                amountPaid: 0,
+                buyer: msg.sender,
+                seller: stored.seller,
+                isPaid: false,
+                isDelivered: false
+            });
+        }
 
         unchecked {
             --stored.stock;
         }
+
+        emit OrderPlaced(orderId, _id, msg.sender, stored.seller, _isPrepaid);
     }
 
-    /**
-     * @dev Retrieves the details of a specific product by its ID.
-     * @param _id The product ID to fetch.
-     * @return name Name of the product.
-     * @return price Price of the product in BRTX tokens.
-     * @return description Description of the product.
-     * @return stock Available stock of the product.
-     * @return image Image URL of the product.
-     * @return productType Type/category of the product.
-     * @return condition Condition of the product.
-     * @return seller Address of the seller who listed the product.
-     */
-    function getProduct(
-        uint256 _id
-    )
-        external
-        view
-        returns (
-            bytes32 name,
-            uint256 price,
-            bytes memory description,
-            uint256 stock,
-            bytes memory image,
-            bytes32 productType,
-            bytes32 condition,
-            address seller
-        )
-    {
-        Store memory stored = store[_id];
+    function getOrderDetails(
+        uint256 _orderId
+    ) external view returns (address seller, uint256 price) {
+        Order storage order = orders[_orderId];
+        Store storage stored = store[order.productId];
 
-        return (
-            stored.name,
-            stored.price,
-            stored.description,
-            stored.stock,
-            stored.image,
-            stored.productType,
-            stored.condition,
-            stored.seller
-        );
+        return (order.seller, stored.price);
+    }
+
+    function confirmDelivery(uint256 _orderId) external {
+        Order storage order = orders[_orderId];
+
+        require(order.isPaid, "Payment not received yet");
+        require(!order.isDelivered, "Already delivered");
+        require(msg.sender == store[order.productId].seller, "Not the seller");
+
+        order.isDelivered = true;
+        emit OrderDelivered(_orderId);
     }
 }
