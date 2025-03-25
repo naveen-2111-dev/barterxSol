@@ -2,59 +2,52 @@
 pragma solidity ^0.8.28;
 
 import "@openzeppelin/contracts/token/ERC721/IERC721.sol";
+import "@openzeppelin/contracts/token/ERC721/IERC721Receiver.sol";
+import "./Erc20.sol";
 
-/**
- * @title NFTManager
- * @dev A smart contract that allows users to transfer ownership of their NFT
- *      to the contract owner (deployer) after granting approval.
- */
-contract NFTManager {
-    address public owner;
+contract NFTManager is IERC721Receiver {
+    address public immutable owner;
+    BRTX public immutable brtx;
+    mapping(uint256 => address) public nftOwners;
 
-    /**
-     * @dev Emitted when an NFT is successfully transferred to the contract owner.
-     * @param message Transfer status message.
-     * @param from Address of the sender (original NFT owner).
-     * @param to Address of the receiver (contract owner).
-     * @param tokenId The unique ID of the transferred NFT.
-     */
-    event NFT_Name_Transfer(
-        string message,
-        address indexed from,
-        address indexed to,
-        uint256 indexed tokenId
-    );
+    event NFTDeposited(address indexed user, uint256 indexed tokenId);
+    event BRTXMinted(address indexed user, uint256 amount);
 
-    /**
-     * @dev Sets the deployer as the contract owner upon deployment.
-     */
-    constructor() {
+    constructor(address _brtxToken) {
+        require(_brtxToken != address(0), "Invalid BRTX Token Address");
         owner = msg.sender;
+        brtx = BRTX(_brtxToken);
     }
 
-    /**
-     * @notice Transfers an NFT from the sender to the contract owner.
-     * @dev The sender must approve this contract to transfer their NFT before calling this function.
-     * @param nftContract Address of the ERC-721 NFT contract.
-     * @param tokenId Unique ID of the NFT to be transferred.
-     */
-    function NameTransfer(address nftContract, uint256 tokenId) external {
+    function depositNFT(
+        address nftContract,
+        uint256 tokenId,
+        uint256 brtxAmount
+    ) external {
         IERC721 nft = IERC721(nftContract);
 
+        require(nft.ownerOf(tokenId) == msg.sender, "You don't own this NFT");
         require(
-            nft.getApproved(tokenId) == address(this),
-            "Contract not approved to transfer this NFT"
+            nft.getApproved(tokenId) == address(this) ||
+                nft.isApprovedForAll(msg.sender, address(this)),
+            "Contract not approved"
         );
 
-        //safeTransfer(fromuser, to_user, nft_token_id) the builtin function in openzepplin's erc721 standard
-        nft.safeTransferFrom(msg.sender, owner, tokenId);
-        require(nft.ownerOf(tokenId) == owner, "NFT transfer failed");
+        nft.safeTransferFrom(msg.sender, address(this), tokenId);
+        nftOwners[tokenId] = msg.sender;
 
-        emit NFT_Name_Transfer(
-            "NFT successfully transferred",
-            msg.sender,
-            owner,
-            tokenId
-        );
+        brtx.mint(msg.sender, brtxAmount);
+
+        emit NFTDeposited(msg.sender, tokenId);
+        emit BRTXMinted(msg.sender, brtxAmount);
+    }
+
+    function onERC721Received(
+        address operator,
+        address from,
+        uint256 tokenId,
+        bytes calldata data
+    ) external pure override returns (bytes4) {
+        return this.onERC721Received.selector;
     }
 }

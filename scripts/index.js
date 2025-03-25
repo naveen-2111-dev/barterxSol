@@ -42,7 +42,7 @@ async function Main() {
 
     console.log(`Deploying ${folderName}...`);
     const gasLimit = 5000000;
-    const contractAddress = "0xcAB8eE241Cd769eED53079b059603B6f7aB6641f";
+    const contractAddress = "0x87837a5c5C9bb26ac2e838d6c5D8bF29EB395426";
     const tx = await deploy.deploy(contractAddress, { gasLimit });
 
     await tx.deploymentTransaction().wait();
@@ -64,10 +64,10 @@ async function Main() {
     console.log(`${folderName} deployed at: ${addressOfContract}`);
   }
 
-  // await deployContract(
-  //   path.join(ContractPath, contractFiles.contract1),
-  //   "contract1"
-  // );
+  await deployContract(
+    path.join(ContractPath, contractFiles.contract1),
+    "contract1"
+  );
   // await deployContract(
   //   path.join(ContractPath, contractFiles.contract2),
   //   "contract2"

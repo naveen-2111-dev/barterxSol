@@ -3,10 +3,6 @@ pragma solidity ^0.8.28;
 
 import "./Erc20.sol";
 
-/**
- * @title BarterXmarketPlace
- * @dev A decentralized marketplace where users can buy products using BRTX tokens.
- */
 contract BarterXmarketPlace {
     struct Store {
         uint256 price;
@@ -31,20 +27,15 @@ contract BarterXmarketPlace {
     BRTX public immutable brtx;
     mapping(uint256 => Store) public store;
     mapping(uint256 => Order) public orders;
-    uint256 public ProductCount = 1;
-    uint256 public OrderCount = 1;
+    uint256 public productCount = 1;
+    uint256 public orderCount = 1;
 
-    event OrderPlaced(
-        uint256 orderId,
-        uint256 productId,
-        address buyer,
-        address seller,
-        bool isPaid
-    );
+    event OrderPlaced(uint256 orderId, uint256 productId, address buyer, address seller, bool isPaid);
     event OrderPaid(uint256 orderId, uint256 amountPaid);
     event OrderDelivered(uint256 orderId);
 
     constructor(address _brtxToken) {
+        require(_brtxToken != address(0), "Invalid BRTX Token Address");
         brtx = BRTX(_brtxToken);
     }
 
@@ -57,7 +48,10 @@ contract BarterXmarketPlace {
         bytes32 productType,
         bytes32 condition
     ) external returns (uint256) {
-        store[ProductCount] = Store({
+        require(price > 0, "Price must be greater than 0");
+        require(stock > 0, "Stock must be greater than 0");
+
+        store[productCount] = Store({
             name: name,
             price: price,
             description: description,
@@ -69,7 +63,7 @@ contract BarterXmarketPlace {
         });
 
         unchecked {
-            return ++ProductCount;
+            return productCount++;
         }
     }
 
@@ -77,20 +71,14 @@ contract BarterXmarketPlace {
         Store storage stored = store[_id];
         require(stored.stock > 0, "Out of stock");
 
-        uint256 orderId = OrderCount++;
+        uint256 orderId;
+        unchecked {
+            orderId = orderCount++;
+        }
 
         if (_isPrepaid) {
-            require(
-                brtx.allowance(msg.sender, address(this)) >= stored.price,
-                "Allowance too low"
-            );
-
-            bool success = brtx.transferFrom(
-                msg.sender,
-                stored.seller,
-                stored.price
-            );
-            require(success, "Transfer failed");
+            require(brtx.allowance(msg.sender, address(this)) >= stored.price, "Allowance too low");
+            require(brtx.transferFrom(msg.sender, stored.seller, stored.price), "Transfer failed");
 
             orders[orderId] = Order({
                 productId: _id,
@@ -113,20 +101,9 @@ contract BarterXmarketPlace {
             });
         }
 
-        unchecked {
-            --stored.stock;
-        }
+        stored.stock--;
 
         emit OrderPlaced(orderId, _id, msg.sender, stored.seller, _isPrepaid);
-    }
-
-    function getOrderDetails(
-        uint256 _orderId
-    ) external view returns (address seller, uint256 price) {
-        Order storage order = orders[_orderId];
-        Store storage stored = store[order.productId];
-
-        return (order.seller, stored.price);
     }
 
     function confirmDelivery(uint256 _orderId) external {
@@ -134,9 +111,21 @@ contract BarterXmarketPlace {
 
         require(order.isPaid, "Payment not received yet");
         require(!order.isDelivered, "Already delivered");
-        require(msg.sender == store[order.productId].seller, "Not the seller");
+        require(msg.sender == order.seller, "Not the seller");
 
         order.isDelivered = true;
         emit OrderDelivered(_orderId);
+    }
+
+    function cancelOrder(uint256 _orderId) external {
+        Order storage order = orders[_orderId];
+        require(!order.isDelivered, "Order already delivered");
+        require(order.buyer == msg.sender, "Not the buyer");
+
+        if (order.isPaid) {
+            require(brtx.transfer(msg.sender, order.amountPaid), "Refund failed");
+        }
+
+        delete orders[_orderId];
     }
 }
