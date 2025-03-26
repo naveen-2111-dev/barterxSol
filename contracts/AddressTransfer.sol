@@ -19,24 +19,19 @@ contract NFTManager is IERC721Receiver {
         brtx = IERC20(_brtxToken);
     }
 
-    function depositNFT(
-        address nftContract,
-        uint256 tokenId,
-        uint256 brtxAmount
-    ) external {
+    function depositNFT(address nftContract, uint256 tokenId, uint256 brtxAmount) external {
         IERC721 nft = IERC721(nftContract);
 
         require(nft.ownerOf(tokenId) == msg.sender, "You don't own this NFT");
         require(
-            nft.getApproved(tokenId) == address(this) ||
-                nft.isApprovedForAll(msg.sender, address(this)),
+            nft.getApproved(tokenId) == address(this) || nft.isApprovedForAll(msg.sender, address(this)),
             "Contract not approved"
         );
 
-        nft.safeTransferFrom(msg.sender, address(this), tokenId);
+        nft.safeTransferFrom(msg.sender, address(this), tokenId); 
         nftOwners[tokenId] = msg.sender;
 
-        require(brtx.transfer(msg.sender, brtxAmount), "BRTX transfer failed");
+        BRTX(address(brtx)).mint(msg.sender, brtxAmount);
 
         emit NFTDeposited(msg.sender, tokenId);
         emit BRTXMinted(msg.sender, brtxAmount);
