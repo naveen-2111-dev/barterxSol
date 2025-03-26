@@ -7,7 +7,7 @@ import "./Erc20.sol";
 
 contract NFTManager is IERC721Receiver {
     address public immutable owner;
-    BRTX public immutable brtx;
+    IERC20 public immutable brtx;
     mapping(uint256 => address) public nftOwners;
 
     event NFTDeposited(address indexed user, uint256 indexed tokenId);
@@ -16,7 +16,7 @@ contract NFTManager is IERC721Receiver {
     constructor(address _brtxToken) {
         require(_brtxToken != address(0), "Invalid BRTX Token Address");
         owner = msg.sender;
-        brtx = BRTX(_brtxToken);
+        brtx = IERC20(_brtxToken);
     }
 
     function depositNFT(
@@ -36,7 +36,7 @@ contract NFTManager is IERC721Receiver {
         nft.safeTransferFrom(msg.sender, address(this), tokenId);
         nftOwners[tokenId] = msg.sender;
 
-        brtx.mint(msg.sender, brtxAmount);
+        require(brtx.transfer(msg.sender, brtxAmount), "BRTX transfer failed");
 
         emit NFTDeposited(msg.sender, tokenId);
         emit BRTXMinted(msg.sender, brtxAmount);

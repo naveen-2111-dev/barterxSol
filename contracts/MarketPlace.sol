@@ -2,6 +2,8 @@
 pragma solidity ^0.8.28;
 
 import "./Erc20.sol";
+import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
 contract BarterXmarketPlace {
     struct Store {
@@ -24,7 +26,8 @@ contract BarterXmarketPlace {
         bool isDelivered;
     }
 
-    BRTX public immutable brtx;
+    using SafeERC20 for IERC20;
+    IERC20 public immutable brtx;
     mapping(uint256 => Store) public store;
     mapping(uint256 => Order) public orders;
     uint256 public productCount = 1;
@@ -36,7 +39,7 @@ contract BarterXmarketPlace {
 
     constructor(address _brtxToken) {
         require(_brtxToken != address(0), "Invalid BRTX Token Address");
-        brtx = BRTX(_brtxToken);
+        brtx = IERC20(_brtxToken);
     }
 
     function addProduct(
