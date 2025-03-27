@@ -6,6 +6,7 @@ configDotenv();
 const brtx = {
   _format: "hh-sol-artifact-1",
   contractName: "BRTX",
+  address: "0x73fc86b73fd4a7978F8EBAD2e5fba1EF32754302",
   sourceName: "contracts/Erc20.sol",
   abi: [
     {
@@ -480,19 +481,21 @@ async function Main() {
   const provider = new ethers.JsonRpcProvider(Config.Url);
   const Signer = new ethers.Wallet(Config.Account, provider);
 
-  const BRTX = new ethers.Contract(
-    "0x224Cd770389C7E7F89Ff7398BE565c2C2807AeBb",
-    brtx.abi,
-    Signer
-  );
+  const BRTX = new ethers.Contract(brtx.address, brtx.abi, Signer);
+
+  console.log(await BRTX.nftManager());
+  console.log(await BRTX.managerLocked());
 
   const tx1 = await BRTX.setNFTManager(
-    "0x09E20b38f61ED546FCc62EFB96b45A73998900a8"
+    "0x4238D6a6f740d84827b80d5c1e9984907e415c6f"
   );
   await tx1.wait();
 
   const tx2 = await BRTX.lockManager();
   await tx2.wait();
+
+  console.log(await BRTX.nftManager());
+  console.log(await BRTX.managerLocked());
 }
 
 Main().catch((err) => {
